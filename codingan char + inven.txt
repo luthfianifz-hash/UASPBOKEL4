@@ -1,0 +1,202 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+[RequireComponent(typeof(CharacterController))]
+public class PlayerMovement : MonoBehaviour
+{
+    public Camera fpsCamera;
+    public Camera tpsCamera;
+    public float walkSpeed = 6f;
+    public float runSpeed = 12f;
+    public float jumpPower = 7f;
+    public float gravity = 10f;
+    public float lookSpeed = 2f;
+    public float lookXLimit = 45f;
+    public float defaultHeight = 2f;
+    public float crouchHeight = 1f;
+    public float crouchSpeed = 3f;
+
+    // --- TAMBAHAN UNTUK ITEM PICKUP & INVENTORY ---
+    private List<GameObject> nearbyPickups = new List<GameObject>();
+    public KeyCode pickupKey = KeyCode.E; // Tombol untuk mengambil barang
+    public KeyCode checkInventoryKey = KeyCode.I; // Tombol untuk mengecek inventaris
+
+    private InventoryManager inventory; // Referensi ke InventoryManager
+    // ----------------------------------------------
+
+    private Vector3 moveDirection = Vector3.zero;
+    private float rotationX = 0;
+    private CharacterController characterController;
+
+    private bool canMove = true;
+    private bool isFpsMode = true;
+
+    private Animator animator;
+
+    void Start()
+    {
+        characterController = GetComponent<CharacterController>();
+        animator = GetComponent<Animator>();
+
+        // Mengambil komponen InventoryManager yang harus ada pada objek ini
+        inventory = GetComponent<InventoryManager>();
+        if (inventory == null)
+        {
+            Debug.LogError("InventoryManager tidak ditemukan! Pastikan script InventoryManager terpasang pada objek yang sama.");
+        }
+
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+
+        isFpsMode = true;
+        fpsCamera.gameObject.SetActive(true);
+        tpsCamera.gameObject.SetActive(false);
+    }
+
+    void Update()
+    {
+        // 1. Switch FPS / TPS mode
+        if (Input.GetKeyDown(KeyCode.M))
+        {
+            isFpsMode = !isFpsMode;
+            fpsCamera.gameObject.SetActive(isFpsMode);
+            tpsCamera.gameObject.SetActive(!isFpsMode);
+        }
+
+        // 2. Perhitungan Movement
+        Vector3 forward = transform.TransformDirection(Vector3.forward);
+        Vector3 right = transform.TransformDirection(Vector3.right);
+
+        float horizontalInput = Input.GetAxisRaw("Vertical");
+        float verticalInput = Input.GetAxisRaw("Horizontal");
+
+        bool isMoving = (horizontalInput != 0f || verticalInput != 0f) && characterController.isGrounded;
+
+        // ===== ANIMASI =====
+        animator.SetBool("isWalking", isMoving);
+        animator.SetBool("isGrounded", characterController.isGrounded);
+        bool isRunning = Input.GetKey(KeyCode.LeftShift) && isMoving;
+        animator.SetBool("isRunning", isRunning);
+
+        // 3. Pemilihan Speed
+        float chosenSpeed = isRunning ? runSpeed : walkSpeed;
+
+        float curSpeedX = canMove ? chosenSpeed * horizontalInput : 0;
+        float curSpeedY = canMove ? chosenSpeed * verticalInput : 0;
+
+        float movementDirectionY = moveDirection.y;
+        moveDirection = (forward * curSpeedX) + (right * curSpeedY);
+
+        // 4. Jump
+        if (Input.GetButton("Jump") && canMove && characterController.isGrounded)
+        {
+            moveDirection.y = jumpPower;
+            animator.SetTrigger("Jump");
+        }
+        else
+        {
+            moveDirection.y = movementDirectionY;
+        }
+
+        // 5. Gravity
+        if (!characterController.isGrounded)
+        {
+            moveDirection.y -= gravity * Time.deltaTime;
+        }
+
+        // 6. Crouch
+        if (Input.GetKey(KeyCode.R) && canMove)
+        {
+            characterController.height = crouchHeight;
+            walkSpeed = crouchSpeed;
+            runSpeed = crouchSpeed;
+            animator.SetBool("isCrouching", true);
+        }
+        else
+        {
+            characterController.height = defaultHeight;
+            walkSpeed = 6f;
+            runSpeed = 12f;
+            animator.SetBool("isCrouching", false);
+        }
+
+        // 7. Move
+        characterController.Move(moveDirection * Time.deltaTime);
+
+        // 8. Look controls
+        if (canMove)
+        {
+            rotationX += -Input.GetAxis("Mouse Y") * lookSpeed;
+            rotationX = Mathf.Clamp(rotationX, -lookXLimit, lookXLimit);
+
+            transform.rotation *= Quaternion.Euler(0, Input.GetAxis("Mouse X") * lookSpeed, 0);
+
+            if (isFpsMode)
+            {
+                fpsCamera.transform.localRotation = Quaternion.Euler(rotationX, 0, 0);
+            }
+        }
+
+        // --- LOGIKA PICKUP ITEM ---
+        if (Input.GetKeyDown(pickupKey) && nearbyPickups.Count > 0)
+        {
+            GameObject itemToPickUp = nearbyPickups[0];
+
+            ProcessPickup(itemToPickUp);
+
+            nearbyPickups.RemoveAt(0);
+        }
+
+        // --- LOGIKA CHECK INVENTORY (Tombol I) ---
+        if (Input.GetKeyDown(checkInventoryKey))
+        {
+            if (inventory != null)
+            {
+                inventory.CheckInventory(); // Panggil fungsi cek inventaris
+            }
+        }
+        // ------------------------------------------
+    }
+
+    // --- FUNGSI DETEKSI TRIGGER UNTUK PICKUP ---
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("PickupItem"))
+        {
+            if (!nearbyPickups.Contains(other.gameObject))
+            {
+                nearbyPickups.Add(other.gameObject);
+                Debug.Log($"Item {other.name} siap diambil. Tekan {pickupKey}!");
+            }
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.CompareTag("PickupItem"))
+        {
+            if (nearbyPickups.Contains(other.gameObject))
+            {
+                nearbyPickups.Remove(other.gameObject);
+                Debug.Log($"Item {other.name} terlalu jauh.");
+            }
+        }
+    }
+
+    // --- FUNGSI UNTUK MEMPROSES PENGAMBILAN ITEM ---
+    private void ProcessPickup(GameObject item)
+    {
+        // Hapus "(Clone)" jika item berasal dari Instantiate
+        string itemName = item.name.Replace("(Clone)", "").Trim();
+
+        if (inventory != null)
+        {
+            // Tambahkan item ke inventaris sebelum dihancurkan
+            inventory.AddItem(itemName);
+        }
+
+        // Hancurkan objek item dari scene
+        Destroy(item);
+    }
+}

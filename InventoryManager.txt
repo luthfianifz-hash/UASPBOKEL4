@@ -1,0 +1,43 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class InventoryManager : MonoBehaviour
+{
+    // Dictionary untuk menyimpan nama item (string) dan jumlahnya (int)
+    public Dictionary<string, int> items = new Dictionary<string, int>();
+
+    // Fungsi untuk menambahkan item ke inventaris
+    public void AddItem(string itemName)
+    {
+        if (items.ContainsKey(itemName))
+        {
+            // Jika item sudah ada, tambahkan jumlahnya
+            items[itemName]++;
+        }
+        else
+        {
+            // Jika item belum ada, tambahkan item baru dengan jumlah 1
+            items.Add(itemName, 1);
+        }
+        Debug.Log($"[Inventory] {itemName} ditambahkan. Jumlah saat ini: {items[itemName]}");
+    }
+
+    // Fungsi untuk menampilkan isi inventaris
+    public void CheckInventory()
+    {
+        Debug.Log("--- INVENTARIS ANDA ---");
+        if (items.Count == 0)
+        {
+            Debug.Log("Inventaris kosong.");
+            return;
+        }
+
+        foreach (KeyValuePair<string, int> item in items)
+        {
+            // item.Key adalah nama item, item.Value adalah jumlah item
+            Debug.Log($"-> {item.Key}: {item.Value} buah");
+        }
+        Debug.Log("-----------------------");
+    }
+}
