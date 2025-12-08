@@ -1,0 +1,19 @@
+using UnityEngine;
+
+public class SoundEffect : MonoBehaviour
+{
+    // Slot untuk memasukkan file suara (koin/item)
+    public AudioClip suaraAmbil;
+
+    // Fungsi ini terpanggil otomatis saat ada yang masuk ke area Trigger (Menyentuh barang)
+    private void OnTriggerEnter(Collider other)
+    {
+        // Cek apakah yang menyentuh adalah Player? (Biar musuh gak bisa ambil koin)
+        if (other.CompareTag("Player"))
+        {
+            // 1. Buat suara di posisi benda ini (walaupun bendanya nanti hilang)
+            // Format: (File Suara, Posisi Suara, Volume 0-1)
+            AudioSource.PlayClipAtPoint(suaraAmbil, transform.position, 1.0f);
+        }
+    }
+}
