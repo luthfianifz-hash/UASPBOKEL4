@@ -1,0 +1,83 @@
+using UnityEngine;
+
+public class PlayerSounds : MonoBehaviour
+{
+    [Header("Komponen Audio")]
+    public AudioSource sumberSuara;
+    public AudioClip suaraLangkah;
+    public AudioClip suaraLoncat;
+
+    [Header("Pengaturan Langkah")]
+    public float jedaJalan = 0.5f; // Jarak waktu antar langkah saat jalan (detik)
+    public float jedaLari = 0.3f;  // Jarak waktu antar langkah saat lari (lebih cepat)
+
+    private float timerLangkah; // Penghitung waktu internal
+    private CharacterController charCtrl; // Untuk cek apakah napak tanah
+
+    void Start()
+    {
+        // Mencari komponen CharacterController di Player
+        charCtrl = GetComponent<CharacterController>();
+        // Jika pakai Rigidbody, bagian charCtrl ini perlu disesuaikan
+    }
+
+    void Update()
+    {
+        CekPergerakan();
+        CekLoncat();
+    }
+
+    void CekLoncat()
+    {
+        // Jika tombol Spasi ditekan DAN pemain sedang napak tanah
+        if (Input.GetButtonDown("Jump") && charCtrl.isGrounded)
+        {
+            sumberSuara.PlayOneShot(suaraLoncat);
+        }
+    }
+
+    void CekPergerakan()
+    {
+        // 1. Cek apakah pemain sedang napak tanah? (Gak boleh bunyi langkah kalau terbang)
+        if (charCtrl.isGrounded)
+        {
+            // 2. Cek apakah pemain sedang bergerak? (Tekan W/A/S/D)
+            // (horizontal dan vertical tidak 0 artinya ada tombol ditekan)
+            bool sedangBergerak = Input.GetAxis("Horizontal") != 0 || Input.GetAxis("Vertical") != 0;
+
+            if (sedangBergerak)
+            {
+                // 3. Cek apakah sedang Lari (Shift) atau Jalan Biasa?
+                bool sedangLari = Input.GetKey(KeyCode.LeftShift);
+
+                // Tentukan jeda waktunya (Kalau lari, jedanya lebih singkat)
+                float jedaSaatIni = sedangLari ? jedaLari : jedaJalan;
+
+                // 4. Kurangi timer
+                timerLangkah -= Time.deltaTime;
+
+                // 5. Jika timer habis, bunyikan suara!
+                if (timerLangkah <= 0)
+                {
+                    BunyikanLangkah();
+                    timerLangkah = jedaSaatIni; // Reset timer
+                }
+            }
+            else
+            {
+                // Kalau diam, reset timer supaya pas jalan lagi langsung bunyi
+                timerLangkah = 0;
+            }
+        }
+    }
+
+    void BunyikanLangkah()
+    {
+        // Trik PRO: Ubah Pitch sedikit biar suaranya gak terdengar robot
+        // Suara akan acak sedikit lebih rendah (0.8) atau lebih tinggi (1.1)
+        sumberSuara.pitch = Random.Range(0.8f, 1.1f);
+
+        // Mainkan suara langkah
+        sumberSuara.PlayOneShot(suaraLangkah);
+    }
+}
