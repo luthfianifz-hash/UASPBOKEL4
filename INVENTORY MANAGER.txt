@@ -1,0 +1,130 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using TMPro; // Untuk TextMeshProUGUI
+using UnityEngine.UI; // Untuk Image
+
+public class InventoryManager : MonoBehaviour
+{
+    // Dictionary untuk menyimpan data inventaris: Nama Item (Key) dan Jumlahnya (Value)
+    // Semua item yang mengandung "Coin" akan menggunakan Key "Coin"
+    // Semua item yang mengandung "Bunga" akan menggunakan Key "Bunga"
+    public Dictionary<string, int> items = new Dictionary<string, int>();
+
+    // --- REFERENSI UI ---
+    [Header("UI References")]
+
+    // Panel Utama Inventaris
+    public GameObject inventoryPanel;
+
+    // UI Khusus untuk Koin
+    public Image bukuIcon;
+    public TextMeshProUGUI bukuCountText;
+
+    // UI Khusus untuk Bunga (BARU)
+    public Image bungaIcon;
+    public TextMeshProUGUI bungaCountText;
+    // --------------------
+
+    // Fungsi yang dipanggil oleh PlayerMovement.cs saat mengambil barang (Tombol E)
+    public void AddItem(string itemName)
+    {
+        // Variabel untuk menyimpan KEY yang akan digunakan di Dictionary
+        string itemKey = itemName;
+
+        // === LOGIKA NORMALISASI KEY ===
+        if (itemName.Contains("Buku"))
+        {
+            itemKey = "Buku"; // Normalisasi: Semua item dengan kata "Coin" masuk ke Key "Coin"
+        }
+        else if (itemName.Contains("Bunga") || itemName.Contains("Flower"))
+        {
+            itemKey = "Bunga"; // Normalisasi: Semua item dengan kata "Bunga" (atau Flower) masuk ke Key "Bunga"
+        }
+        // ==============================
+
+        // Logika penambahan/penghitungan item
+        if (items.ContainsKey(itemKey))
+        {
+            items[itemKey]++;
+        }
+        else
+        {
+            items.Add(itemKey, 1);
+        }
+
+        Debug.Log($"[Inventory] Item '{itemName}' ditambahkan sebagai Key '{itemKey}'. Jumlah saat ini: {items[itemKey]}");
+
+        // Panggil fungsi untuk memperbarui tampilan di layar
+        UpdateItemDisplay(itemKey);
+    }
+
+    // Fungsi yang dipanggil oleh PlayerMovement.cs saat mengecek inventaris (Tombol I)
+    public void CheckInventory()
+    {
+        // Toggle (mengganti status aktif) dari inventoryPanel
+        if (inventoryPanel != null)
+        {
+            inventoryPanel.SetActive(!inventoryPanel.activeSelf);
+        }
+
+        // Menampilkan isi inventaris di Console (untuk debug)
+        if (inventoryPanel != null && inventoryPanel.activeSelf)
+        {
+            DisplayInventoryContents();
+        }
+    }
+
+    // FUNGSI UNTUK MEMPERBARUI TAMPILAN ELEMEN UI (HUD/Panel)
+    private void UpdateItemDisplay(string itemKey)
+    {
+        // --- Logika untuk Koin ---
+        if (itemKey == "Buku" && bukuCountText != null)
+        {
+            if (items.ContainsKey("Buku"))
+            {
+                bukuCountText.text = items["Buku"].ToString();
+            }
+
+            if (bukuIcon != null && items["Buku"] >= 1)
+            {
+                bukuIcon.gameObject.SetActive(true);
+            }
+        }
+
+        // --- Logika untuk Bunga (BARU) ---
+        if (itemKey == "Bunga" && bungaCountText != null)
+        {
+            if (items.ContainsKey("Bunga"))
+            {
+                // Mengatur teks jumlah Bunga
+                bungaCountText.text = items["Bunga"].ToString();
+            }
+
+            if (bungaIcon != null && items["Bunga"] >= 1)
+            {
+                // Mengaktifkan ikon Bunga saat pertama kali diambil
+                bungaIcon.gameObject.SetActive(true);
+            }
+        }
+    }
+
+    // Fungsi untuk menampilkan isi inventaris di Console (hanya untuk debug)
+    private void DisplayInventoryContents()
+    {
+        Debug.Log("--- INVENTARIS ANDA ---");
+
+        if (items.Count == 0)
+        {
+            Debug.Log("Inventaris kosong.");
+            return;
+        }
+
+        foreach (KeyValuePair<string, int> item in items)
+        {
+            Debug.Log($"-> {item.Key}: {item.Value} buah");
+        }
+
+        Debug.Log("-----------------------");
+    }
+}
