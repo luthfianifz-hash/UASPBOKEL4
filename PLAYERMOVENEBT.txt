@@ -1,0 +1,48 @@
+using UnityEngine;
+
+public class MovementTutorial : MonoBehaviour
+{
+    [Header("UI Reference")]
+    public GameObject tutorialUI;
+
+    // ... (Variabel lain jika Anda menggunakan logika Fade Out) ...
+
+    void Update()
+    {
+        // 1. Logika untuk menyembunyikan (hide) panel jika pemain bergerak
+        if (tutorialUI.activeSelf && (Mathf.Abs(Input.GetAxis("Horizontal")) > 0.1f || Mathf.Abs(Input.GetAxis("Vertical")) > 0.1f))
+        {
+            HideTutorial();
+        }
+
+        // 2. LOGIKA BARU: Cek jika tombol ESC ditekan
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            // Panggil kembali panel tutorial
+            // Kita pastikan panel hanya ditampilkan jika saat ini sedang tidak aktif (!tutorialUI.activeSelf)
+            if (tutorialUI != null && !tutorialUI.activeSelf)
+            {
+                ShowTutorial();
+            }
+        }
+    }
+
+    // Fungsi untuk menyembunyikan
+    public void HideTutorial()
+    {
+        if (tutorialUI != null)
+        {
+            tutorialUI.SetActive(false);
+        }
+    }
+
+    // Fungsi untuk memanggil kembali
+    public void ShowTutorial()
+    {
+        if (tutorialUI != null)
+        {
+            tutorialUI.SetActive(true);
+        }
+    }
+}
+
